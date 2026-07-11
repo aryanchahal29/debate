@@ -2,6 +2,9 @@ from typing import TypedDict, List, Dict, Any, Optional
 
 class DiscussionState(TypedDict):
     discussion_id: str
+    workflow_type: str
+    parent_report_id: Optional[str]
+    report_version: int
     question: str
     selected_models: List[str]
     api_keys: Dict[str, str]

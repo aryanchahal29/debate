@@ -42,6 +42,26 @@ export default function DiscussionPage() {
     }
   }
 
+  const handleFollowUp = async (action: 'continue' | 'challenge') => {
+    // In a production app, retrieve API keys from Context/LocalStorage.
+    const apiKeys = {} 
+    
+    try {
+      const res = await fetch(`http://localhost:8000/api/v1/discussions/${discussionId}/${action}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ api_keys: apiKeys })
+      })
+      if (res.ok) {
+        setReport(null)
+        setMessages([])
+        setStatus(action === 'continue' ? 'Continuing Discussion...' : 'Challenging Answer...')
+      }
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
   if (report) {
     return (
       <div className="min-h-screen bg-black text-white p-8">
@@ -79,8 +99,8 @@ export default function DiscussionPage() {
               <p className="text-4xl font-bold text-blue-400">{report.confidence}%</p>
             </div>
             <div className="space-x-4">
-              <button className="px-6 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-medium transition">Discuss Further</button>
-              <button className="px-6 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-medium transition">Challenge Answer</button>
+              <button onClick={() => handleFollowUp('continue')} className="px-6 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-medium transition">Discuss Further</button>
+              <button onClick={() => handleFollowUp('challenge')} className="px-6 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-medium transition">Challenge Answer</button>
             </div>
           </div>
         </div>

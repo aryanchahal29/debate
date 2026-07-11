@@ -17,11 +17,12 @@ from app.db.session import engine
 from sqlmodel import Session
 
 @celery_app.task
-def start_discussion_task(discussion_id: str, question: str, models: list, api_keys: dict, depth: str):
+def start_discussion_task(discussion_id: str, question: str, models: list, api_keys: dict, depth: str, workflow_type: str = "NORMAL", parent_report_id: str = None, report_version: int = 1):
     """
     Background task to run the AI Council debate process via LangGraph.
+    Supports NORMAL, CONTINUE, and CHALLENGE modes.
     """
-    logger.info(f"Starting discussion {discussion_id} with models {models}")
+    logger.info(f"Starting discussion {discussion_id} with workflow {workflow_type}")
     
     with Session(engine) as db_session:
         memory_engine = MemoryEngine(db_session)
@@ -33,6 +34,9 @@ def start_discussion_task(discussion_id: str, question: str, models: list, api_k
         
         initial_state: DiscussionState = {
             "discussion_id": discussion_id,
+            "workflow_type": workflow_type,
+            "parent_report_id": parent_report_id,
+            "report_version": report_version,
             "question": question,
             "selected_models": models,
             "api_keys": api_keys,

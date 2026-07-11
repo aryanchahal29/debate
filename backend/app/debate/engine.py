@@ -112,6 +112,41 @@ class DebateEngine:
         state["cycles"].append(cycle_responses)
         return state
 
+    def collaborative_discussion_continued(self, state: DiscussionState):
+        broadcast_ws(state["discussion_id"], "Continuing Discussion...")
+        prompt_tmpl = self.load_prompt("continue_discussion")
+        
+        # Fetch remaining disagreements from latest consensus
+        disagreements = state.get("missing_information", []) + state.get("disagreements", [])
+        prompt = prompt_tmpl.replace("{disagreements}", str(disagreements))
+        
+        cycle_responses = {}
+        for model in state["selected_models"]:
+            messages = [{"role": "system", "content": prompt}]
+            api_key = state["api_keys"].get(model)
+            response = generate_response(model, messages, api_key=api_key)
+            cycle_responses[model] = response
+            
+        state["cycles"].append(cycle_responses)
+        return state
+        
+    def challenge_answer(self, state: DiscussionState):
+        broadcast_ws(state["discussion_id"], "Challenging Answer...")
+        prompt_tmpl = self.load_prompt("challenge")
+        
+        # We assume the parent report JSON is placed in memory or state for this run
+        prompt = prompt_tmpl.replace("{conclusion}", str(state.get("parent_report_id", "Previous Conclusion")))
+        
+        cycle_responses = {}
+        for model in state["selected_models"]:
+            messages = [{"role": "system", "content": prompt}]
+            api_key = state["api_keys"].get(model)
+            response = generate_response(model, messages, api_key=api_key)
+            cycle_responses[model] = response
+            
+        state["cycles"].append(cycle_responses)
+        return state
+
     def generate_report(self, state: DiscussionState):
         broadcast_ws(state["discussion_id"], "Preparing Final Answer...")
         
@@ -126,20 +161,42 @@ class DebateEngine:
         state["status"] = "Completed"
         return state
 
+    def dummy_start(self, state: DiscussionState):
+        return state
+
+    def route_start(self, state: DiscussionState):
+        wf = state.get("workflow_type", "NORMAL")
+        if wf == "CONTINUE":
+            return "discuss_continue"
+        elif wf == "CHALLENGE":
+            return "challenge"
+        return "independent"
+
     def build_graph(self):
         workflow = StateGraph(DiscussionState)
         
+        workflow.add_node("start", self.dummy_start)
         workflow.add_node("independent", self.independent_thinking)
         workflow.add_node("consensus_1", self.generate_consensus)
         workflow.add_node("discuss", self.collaborative_discussion)
+        workflow.add_node("discuss_continue", self.collaborative_discussion_continued)
+        workflow.add_node("challenge", self.challenge_answer)
         workflow.add_node("consensus_2", self.generate_consensus)
         workflow.add_node("verify", self.verify_claims)
         workflow.add_node("report", self.generate_report)
         
-        workflow.set_entry_point("independent")
+        workflow.set_entry_point("start")
+        workflow.add_conditional_edges("start", self.route_start, {
+            "independent": "independent",
+            "discuss_continue": "discuss_continue",
+            "challenge": "challenge"
+        })
+        
         workflow.add_edge("independent", "consensus_1")
         workflow.add_edge("consensus_1", "discuss")
         workflow.add_edge("discuss", "consensus_2")
+        workflow.add_edge("discuss_continue", "consensus_2")
+        workflow.add_edge("challenge", "consensus_2")
         workflow.add_edge("consensus_2", "verify")
         
         workflow.add_conditional_edges(

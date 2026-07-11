@@ -42,6 +42,9 @@ class Consensus(ConsensusBase, table=True):
 class FinalReportBase(SQLModel):
     discussion_id: uuid.UUID = Field(foreign_key="discussion.id")
     report_json: dict = Field(sa_column=Column(JSON), default_factory=dict)
+    workflow_type: str = Field(default="normal") # normal, continue, challenge
+    report_version: int = Field(default=1)
+    parent_report_id: Optional[uuid.UUID] = Field(default=None, foreign_key="finalreport.id")
 
 class FinalReport(FinalReportBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
