@@ -16,11 +16,16 @@ export default function HomePage() {
   const [question, setQuestion] = useState("")
   const [selectedModels, setSelectedModels] = useState<string[]>([])
   const [depth, setDepth] = useState("Balanced")
+  const [apiKeys, setApiKeys] = useState<Record<string, string>>({})
 
   const toggleModel = (model: string) => {
     setSelectedModels(prev =>
       prev.includes(model) ? prev.filter(m => m !== model) : [...prev, model]
     )
+  }
+
+  const updateApiKey = (model: string, key: string) => {
+    setApiKeys(prev => ({ ...prev, [model]: key }))
   }
 
   const handleGenerate = async () => {
@@ -41,6 +46,7 @@ export default function HomePage() {
         question,
         selected_models: selectedModels,
         discussion_depth: depth,
+        api_keys: apiKeys
       }),
     })
     
@@ -90,6 +96,28 @@ export default function HomePage() {
             ))}
           </div>
         </section>
+
+        {selectedModels.length > 0 && (
+          <section className="space-y-4 p-6 bg-zinc-900 rounded-lg border border-zinc-800">
+            <h2 className="text-xl font-semibold">API Keys</h2>
+            <p className="text-sm text-gray-400">Keys are not stored on the server. They are only used for this session.</p>
+            <div className="space-y-3">
+              {selectedModels.map(model => (
+                <div key={model} className="flex flex-col space-y-1">
+                  <label className="text-sm font-medium">{model} Key</label>
+                  <input
+                    type="password"
+                    placeholder={`sk-...`}
+                    className="w-full bg-black border border-zinc-700 rounded-md p-2 text-white text-sm"
+                    value={apiKeys[model] || ""}
+                    onChange={(e) => updateApiKey(model, e.target.value)}
+                  />
+                </div>
+              ))}
+            </div>
+            {/* Note: In a production setting, also ask for gemini-2.5-flash key if not using a default one for internal engines */}
+          </section>
+        )}
 
         <section className="space-y-4">
           <h2 className="text-xl font-semibold">Discussion Depth</h2>
