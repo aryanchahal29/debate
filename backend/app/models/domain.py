@@ -1,0 +1,46 @@
+from sqlmodel import SQLModel, Field, Column, JSON
+from typing import List, Optional
+from datetime import datetime, timezone
+import uuid
+
+class DiscussionBase(SQLModel):
+    question: str
+    selected_models: List[str] = Field(sa_column=Column(JSON))
+    discussion_depth: str = Field(default="Balanced")
+    status: str = Field(default="Created") # Created, In Progress, Completed, Failed
+
+class Discussion(DiscussionBase, table=True):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class ModelResponseBase(SQLModel):
+    discussion_id: uuid.UUID = Field(foreign_key="discussion.id")
+    model_name: str
+    cycle: int
+    response: str
+    updated_response: Optional[str] = None
+
+class ModelResponse(ModelResponseBase, table=True):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class ConsensusBase(SQLModel):
+    discussion_id: uuid.UUID = Field(foreign_key="discussion.id")
+    agreements: List[str] = Field(sa_column=Column(JSON), default_factory=list)
+    disagreements: List[str] = Field(sa_column=Column(JSON), default_factory=list)
+    missing_information: List[str] = Field(sa_column=Column(JSON), default_factory=list)
+    confidence: Optional[int] = None
+
+class Consensus(ConsensusBase, table=True):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class FinalReportBase(SQLModel):
+    discussion_id: uuid.UUID = Field(foreign_key="discussion.id")
+    final_answer: str
+    summary: str
+    confidence: int
+
+class FinalReport(FinalReportBase, table=True):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    generated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
