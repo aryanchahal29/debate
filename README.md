@@ -1,8 +1,8 @@
-# AI Council
+# YouVo Battleground
 
-> One Question. Multiple AI Minds. One Trusted Answer.
+> Ask Better. Know Better.
 
-AI Council is an intelligent reasoning platform where multiple AI models collaborate in the background to produce a single high-quality answer. It removes the need for humans to manually compare AI responses by utilizing a cyclical LangGraph-based engine to facilitate independent thinking, consensus building, debate, and verification.
+YouVo Battleground is an intelligent reasoning platform where multiple AI models collaborate in the background to produce a single high-quality answer. It removes the need for humans to manually compare AI responses by utilizing a cyclical LangGraph-based engine to facilitate independent thinking, consensus building, debate, and verification.
 
 ---
 
@@ -15,7 +15,7 @@ graph TD
     API --> Queue[Redis / Celery]
     Queue --> Engine[Debate Engine LangGraph]
     
-    subgraph AI Council Engines
+    subgraph YouVo Battleground Engines
         Engine --> Ind[Independent Thinking]
         Ind --> Con1[Consensus Engine]
         Con1 --> Dis[Collaborative Discussion]
@@ -36,12 +36,13 @@ graph TD
 
 ## ✨ Features
 
-- **Multi-Model Collaboration**: Select from GPT, Claude, Gemini, DeepSeek, and more.
+- **Multi-Model Collaboration**: Select from GPT, Claude, Gemini, DeepSeek, and more via a sleek Provider Accordion UI.
+- **Custom Models**: Connect any OpenRouter or self-hosted model natively into the routing engine.
 - **Autonomous Consensus**: Extracts agreements, disagreements, and open questions automatically.
 - **Verification Engine**: Checks for logical contradictions and hallucinations.
 - **Versioned Reporting**: Preserves all generated reports to track the evolution of the answer.
 - **Interactive Follow-ups**: Deliberate further or challenge an answer without restarting the entire discussion.
-- **Secure Key Management**: API keys are passed from the client securely and never logged or stored.
+- **Secure Key Management**: API keys are passed from the client securely and never logged or stored. Dynamic UI only requests keys for actively selected providers.
 
 ---
 
@@ -110,7 +111,7 @@ This starts:
 - **Next.js UI**: `localhost:3000`
 
 ### 3. Open the Dashboard
-Navigate to [http://localhost:3000](http://localhost:3000) and start your first AI Council discussion!
+Navigate to [http://localhost:3000](http://localhost:3000) and enter the Battleground!
 
 ---
 
