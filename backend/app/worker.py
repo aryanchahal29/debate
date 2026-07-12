@@ -17,7 +17,7 @@ from app.db.session import engine
 from sqlmodel import Session
 
 @celery_app.task
-def start_discussion_task(discussion_id: str, question: str, models: list, api_keys: dict, depth: str, workflow_type: str = "NORMAL", parent_report_id: str = None, report_version: int = 1):
+def start_discussion_task(discussion_id: str, question: str, models: list, api_keys: dict, max_rounds: int, internal_engine: str, custom_api_bases: dict = {}, custom_model_providers: dict = {}, workflow_type: str = "NORMAL", parent_report_id: str = None, report_version: int = 1):
     """
     Background task to run the AI Council debate process via LangGraph.
     Supports NORMAL, CONTINUE, and CHALLENGE modes.
@@ -30,8 +30,6 @@ def start_discussion_task(discussion_id: str, question: str, models: list, api_k
         
         graph = debate_engine.build_graph()
         
-        max_cycles = 2 if depth == "Fast" else 3 if depth == "Balanced" else 5
-        
         initial_state: DiscussionState = {
             "discussion_id": discussion_id,
             "workflow_type": workflow_type,
@@ -39,10 +37,13 @@ def start_discussion_task(discussion_id: str, question: str, models: list, api_k
             "report_version": report_version,
             "question": question,
             "selected_models": models,
+            "max_rounds": max_rounds,
+            "internal_engine": internal_engine,
             "api_keys": api_keys,
+            "custom_api_bases": custom_api_bases,
+            "custom_model_providers": custom_model_providers,
             "cycles": [],
-            "discussion_depth": depth,
-            "max_cycles": max_cycles,
+            "status": "Initializing",
             "consensus_score": None,
             "hallucination_score": None,
             "reasoning_score": None,
@@ -51,8 +52,7 @@ def start_discussion_task(discussion_id: str, question: str, models: list, api_k
             "provider_failures": {},
             "execution_time": 0.0,
             "tokens_used": 0,
-            "cost": 0.0,
-            "status": "In Progress"
+            "cost": 0.0
         }
         
         final_state = graph.invoke(initial_state)

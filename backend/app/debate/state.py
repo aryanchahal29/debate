@@ -7,7 +7,11 @@ class DiscussionState(TypedDict):
     report_version: int
     question: str
     selected_models: List[str]
+    max_rounds: int
+    internal_engine: str
     api_keys: Dict[str, str]
+    custom_api_bases: Dict[str, str]
+    custom_model_providers: Dict[str, str]
     
     # Cycles will store a list of dicts, where each dict maps model_name to response string
     cycles: List[Dict[str, str]]

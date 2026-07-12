@@ -1,0 +1,50 @@
+{
+  "panels": [
+    {
+      "name": "Gemini Free Panel",
+      "models": ["gemini/gemini-1.5-flash", "gemini/gemini-1.5-pro", "gemini/gemini-2.0-flash"]
+    },
+    {
+      "name": "Groq Free Panel",
+      "models": ["groq/llama3-8b-8192", "groq/gemma-7b-it", "groq/mixtral-8x7b-32768"]
+    },
+    {
+      "name": "OpenRouter Free Panel",
+      "models": ["openrouter/meta-llama/llama-3-8b-instruct", "openrouter/google/gemma-7b-it"]
+    },
+    {
+      "name": "Premium Mix Panel",
+      "models": ["gpt-4o", "claude-3-5-sonnet-20240620", "gemini/gemini-1.5-pro"]
+    },
+    {
+      "name": "Custom Panel (Choose models manually)",
+      "models": []
+    }
+  ],
+  "availableModels": [
+    {"id": "gpt-4o", "name": "GPT-4o", "provider": "OpenAI"},
+    {"id": "gpt-4o-mini", "name": "GPT-4o Mini", "provider": "OpenAI"},
+    {"id": "claude-3-5-sonnet-20240620", "name": "Claude 3.5 Sonnet", "provider": "Anthropic"},
+    {"id": "claude-3-haiku-20240307", "name": "Claude 3 Haiku", "provider": "Anthropic"},
+    {"id": "gemini/gemini-1.5-pro", "name": "Gemini 1.5 Pro", "provider": "Google"},
+    {"id": "gemini/gemini-1.5-flash", "name": "Gemini 1.5 Flash", "provider": "Google"},
+    {"id": "gemini/gemini-2.0-flash", "name": "Gemini 2.0 Flash", "provider": "Google"},
+    {"id": "groq/llama3-8b-8192", "name": "Llama 3 8B", "provider": "Groq"},
+    {"id": "groq/gemma-7b-it", "name": "Gemma 7B", "provider": "Groq"},
+    {"id": "groq/mixtral-8x7b-32768", "name": "Mixtral 8x7B", "provider": "Groq"},
+    {"id": "openrouter/meta-llama/llama-3-8b-instruct", "name": "Llama 3 8B (OpenRouter)", "provider": "OpenRouter"}
+  ],
+  "providers": [
+    {"id": "Google", "label": "Google AI (Gemini)", "url": "https://aistudio.google.com/app/apikey"},
+    {"id": "Groq", "label": "Groq", "url": "https://console.groq.com/keys"},
+    {"id": "OpenRouter", "label": "OpenRouter", "url": "https://openrouter.ai/keys"},
+    {"id": "Anthropic", "label": "Anthropic", "url": "https://console.anthropic.com/settings/keys"},
+    {"id": "OpenAI", "label": "OpenAI", "url": "https://platform.openai.com/api-keys"}
+  ],
+  "internalEngines": [
+    {"id": "auto", "name": "Auto (Recommended)"},
+    {"id": "gpt-4o-mini", "name": "GPT-4o Mini"},
+    {"id": "gemini/gemini-1.5-flash", "name": "Gemini Flash"},
+    {"id": "claude-3-haiku-20240307", "name": "Claude Haiku"}
+  ]
+}

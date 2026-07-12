@@ -20,5 +20,5 @@ if settings.BACKEND_CORS_ORIGINS:
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
 @app.get("/")
-def root():
-    return {"message": "Welcome to AI Council API"}
+def read_root():
+    return {"message": "Welcome to YouVo Battleground API"}

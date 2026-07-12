@@ -1,30 +1,54 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlmodel import Session, select
+from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
+from sqlmodel import Session
 from app.db.session import get_session
-from app.models.domain import Discussion, DiscussionBase
+from app.models.domain import Discussion, ModelResponse, Consensus, FinalReport
+from pydantic import BaseModel
 import uuid
+from app.core.config import settings
 
 router = APIRouter()
 
-@router.post("/", response_model=Discussion)
-def create_discussion(discussion_in: DiscussionBase, session: Session = Depends(get_session)):
-    db_discussion = Discussion.model_validate(discussion_in)
-    session.add(db_discussion)
-    session.commit()
-    session.refresh(db_discussion)
-    
-    # TODO: Trigger Celery background task for debate engine
-    
-    return db_discussion
+class StartDiscussionRequest(BaseModel):
+    question: str
+    models: list[str]
+    api_keys: dict
+    max_rounds: int = 2
+    internal_engine: str = "auto"
+    custom_api_bases: dict = {}
+    custom_model_providers: dict = {}
 
-@router.get("/{discussion_id}", response_model=Discussion)
-def get_discussion(discussion_id: uuid.UUID, session: Session = Depends(get_session)):
+@router.post("/")
+def create_discussion(request: StartDiscussionRequest, background_tasks: BackgroundTasks, session: Session = Depends(get_session)):
+    discussion = Discussion(
+        question=request.question,
+        selected_models=request.models,
+        max_rounds=request.max_rounds,
+        internal_engine=request.internal_engine
+    )
+    session.add(discussion)
+    session.commit()
+    session.refresh(discussion)
+    
+    from app.worker import start_discussion_task
+    if settings.USE_CELERY:
+        start_discussion_task.delay(
+            str(discussion.id), request.question, request.models, request.api_keys, request.max_rounds, request.internal_engine,
+            request.custom_api_bases, request.custom_model_providers
+        )
+    else:
+        # Development Mode: Run task directly in FastAPI background
+        background_tasks.add_task(
+            start_discussion_task, str(discussion.id), request.question, request.models, request.api_keys, request.max_rounds, request.internal_engine, request.custom_api_bases, request.custom_model_providers
+        )
+        
+    return {"discussion_id": discussion.id, "status": "started"}
+
+@router.get("/{discussion_id}")
+def get_discussion_status(discussion_id: uuid.UUID, session: Session = Depends(get_session)):
     discussion = session.get(Discussion, discussion_id)
     if not discussion:
         raise HTTPException(status_code=404, detail="Discussion not found")
-    return discussion
-
-from app.models.domain import FinalReport
+    return {"id": discussion.id, "status": discussion.status}
 
 @router.get("/{discussion_id}/report", response_model=FinalReport)
 def get_discussion_report(discussion_id: uuid.UUID, session: Session = Depends(get_session)):
@@ -39,28 +63,37 @@ class FollowUpRequest(BaseModel):
     api_keys: dict
 
 @router.post("/{discussion_id}/continue")
-def continue_discussion(discussion_id: uuid.UUID, req: FollowUpRequest, session: Session = Depends(get_session)):
+def continue_discussion(discussion_id: uuid.UUID, req: FollowUpRequest, background_tasks: BackgroundTasks, session: Session = Depends(get_session)):
     discussion = session.get(Discussion, discussion_id)
     if not discussion:
         raise HTTPException(status_code=404, detail="Discussion not found")
     
-    # In reality, fetch latest report_version
     from app.worker import start_discussion_task
-    start_discussion_task.delay(
-        str(discussion_id), discussion.question, discussion.selected_models, req.api_keys, discussion.discussion_depth,
-        workflow_type="CONTINUE", parent_report_id=str(discussion_id), report_version=2
-    )
+    if settings.USE_CELERY:
+        start_discussion_task.delay(
+            str(discussion_id), discussion.question, discussion.selected_models, req.api_keys, discussion.max_rounds, discussion.internal_engine,
+            workflow_type="CONTINUE", parent_report_id=str(discussion_id), report_version=2
+        )
+    else:
+        background_tasks.add_task(
+            start_discussion_task, str(discussion_id), discussion.question, discussion.selected_models, req.api_keys, discussion.max_rounds, discussion.internal_engine, "CONTINUE", str(discussion_id), 2
+        )
     return {"status": "processing", "workflow_type": "CONTINUE"}
 
 @router.post("/{discussion_id}/challenge")
-def challenge_answer(discussion_id: uuid.UUID, req: FollowUpRequest, session: Session = Depends(get_session)):
+def challenge_answer(discussion_id: uuid.UUID, req: FollowUpRequest, background_tasks: BackgroundTasks, session: Session = Depends(get_session)):
     discussion = session.get(Discussion, discussion_id)
     if not discussion:
         raise HTTPException(status_code=404, detail="Discussion not found")
         
     from app.worker import start_discussion_task
-    start_discussion_task.delay(
-        str(discussion_id), discussion.question, discussion.selected_models, req.api_keys, discussion.discussion_depth,
-        workflow_type="CHALLENGE", parent_report_id=str(discussion_id), report_version=2
-    )
+    if settings.USE_CELERY:
+        start_discussion_task.delay(
+            str(discussion_id), discussion.question, discussion.selected_models, req.api_keys, discussion.max_rounds, discussion.internal_engine,
+            workflow_type="CHALLENGE", parent_report_id=str(discussion_id), report_version=2
+        )
+    else:
+        background_tasks.add_task(
+            start_discussion_task, str(discussion_id), discussion.question, discussion.selected_models, req.api_keys, discussion.max_rounds, discussion.internal_engine, "CHALLENGE", str(discussion_id), 2
+        )
     return {"status": "processing", "workflow_type": "CHALLENGE"}

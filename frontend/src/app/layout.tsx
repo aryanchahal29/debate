@@ -5,8 +5,8 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "AI Council",
-  description: "One Question. Multiple AI Minds. One Trusted Answer.",
+  title: "YouVo Battleground — Ask Better. Know Better.",
+  description: "Agentic Reasoning Engine",
 };
 
 export default function RootLayout({

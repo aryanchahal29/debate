@@ -11,9 +11,9 @@ class ConsensusEngine:
         with open(prompt_path, "r") as f:
             self.prompt_template = f.read()
 
-    def extract_consensus(self, responses: dict, api_key: str = None) -> dict:
+    def extract_consensus(self, responses: dict, model: str = "gemini/gemini-2.5-flash", api_key: str = None) -> dict:
         """
-        Analyzes responses using gemini-2.5-flash to extract Agreements, Disagreements, etc.
+        Analyzes responses using the requested internal engine to extract Agreements, Disagreements, etc.
         """
         formatted_prompt = self.prompt_template.replace("{responses}", json.dumps(responses, indent=2))
         
@@ -23,8 +23,8 @@ class ConsensusEngine:
         ]
         
         try:
-            # We use gemini-2.5-flash as the internal synthesis model
-            raw_response = generate_response("gemini/gemini-2.5-flash", messages, api_key=api_key) 
+            # We use the internal synthesis model
+            raw_response = generate_response(model, messages, api_key=api_key) 
             
             cleaned = raw_response.strip().strip('`').removeprefix("json\n")
             return json.loads(cleaned)

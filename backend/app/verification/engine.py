@@ -10,9 +10,9 @@ class VerificationEngine:
         with open(prompt_path, "r") as f:
             self.prompt_template = f.read()
 
-    def verify_claims(self, consensus_data: dict, api_key: str = None) -> dict:
+    def verify_claims(self, consensus_data: dict, model: str = "gemini/gemini-2.5-flash", api_key: str = None) -> dict:
         """
-        Detects hallucinations, logical conflicts, and unsupported claims using gemini-2.5-flash.
+        Detects hallucinations, logical conflicts, and unsupported claims using the selected internal engine.
         """
         formatted_prompt = self.prompt_template.replace("{consensus}", str(consensus_data))
         messages = [
@@ -21,7 +21,7 @@ class VerificationEngine:
         ]
         
         try:
-            issues = generate_response("gemini/gemini-2.5-flash", messages, api_key=api_key)
+            issues = generate_response(model, messages, api_key=api_key)
             return {"passed": True if "no critical conflicts" in issues.lower() else False, "issues": issues}
         except Exception as e:
             logger.error(f"Failed to verify claims: {e}")

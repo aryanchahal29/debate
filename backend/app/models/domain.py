@@ -6,7 +6,8 @@ import uuid
 class DiscussionBase(SQLModel):
     question: str
     selected_models: List[str] = Field(sa_column=Column(JSON))
-    discussion_depth: str = Field(default="Balanced")
+    max_rounds: int = Field(default=2)
+    internal_engine: str = Field(default="auto")
     status: str = Field(default="Created") # Created, In Progress, Completed, Failed
 
 class Discussion(DiscussionBase, table=True):

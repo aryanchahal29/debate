@@ -11,9 +11,9 @@ class ReportEngine:
         with open(prompt_path, "r") as f:
             self.prompt_template = f.read()
 
-    def generate_final_report(self, discussion_data: dict, api_key: str = None):
+    def generate_final_report(self, discussion_data: dict, model: str = "gemini/gemini-2.5-flash", api_key: str = None):
         """
-        Synthesizes the final verified answer using gemini-2.5-flash.
+        Synthesizes the final verified answer using the selected internal engine.
         Returns Structured JSON.
         """
         formatted_prompt = self.prompt_template.replace("{discussion_data}", json.dumps(discussion_data, indent=2))
@@ -23,7 +23,7 @@ class ReportEngine:
         ]
         
         try:
-            raw_response = generate_response("gemini/gemini-2.5-flash", messages, api_key=api_key)
+            raw_response = generate_response(model, messages, api_key=api_key)
             cleaned = raw_response.strip().strip('`').removeprefix("json\n")
             return json.loads(cleaned)
         except Exception as e:

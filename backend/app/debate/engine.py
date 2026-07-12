@@ -29,6 +29,34 @@ class DebateEngine:
         prompt_path = os.path.join(os.path.dirname(__file__), "..", "prompts", f"{name}.md")
         with open(prompt_path, "r") as f:
             return f.read()
+            
+    def get_provider_for_model(self, model: str, state: DiscussionState) -> str:
+        custom_providers = state.get("custom_model_providers", {})
+        if model in custom_providers:
+            return custom_providers[model]
+            
+        if model.startswith("gemini/") or model.startswith("vertex_ai/"): return "Google"
+        if model.startswith("groq/"): return "Groq"
+        if model.startswith("openrouter/"): return "OpenRouter"
+        if "claude" in model: return "Anthropic"
+        if "gpt" in model or "o1" in model: return "OpenAI"
+        return ""
+        
+    def get_internal_engine_and_key(self, state: DiscussionState) -> tuple[str, str]:
+        requested = state.get("internal_engine", "auto")
+        keys = state.get("api_keys", {})
+        
+        if requested != "auto":
+            provider = self.get_provider_for_model(requested, state)
+            return requested, keys.get(provider)
+            
+        # Auto mode: try to find a supported internal engine we have keys for
+        if "OpenAI" in keys and keys["OpenAI"]: return "gpt-4o-mini", keys["OpenAI"]
+        if "Google" in keys and keys["Google"]: return "gemini/gemini-1.5-flash", keys["Google"]
+        if "Anthropic" in keys and keys["Anthropic"]: return "claude-3-haiku-20240307", keys["Anthropic"]
+        if "Groq" in keys and keys["Groq"]: return "groq/llama3-8b-8192", keys["Groq"]
+        
+        return "gpt-4o-mini", None
 
     def independent_thinking(self, state: DiscussionState):
         broadcast_ws(state["discussion_id"], "Thinking...")
@@ -39,8 +67,15 @@ class DebateEngine:
         cycle_responses = {}
         for model in state["selected_models"]:
             messages = [{"role": "system", "content": prompt}]
-            api_key = state["api_keys"].get(model)
-            response = generate_response(model, messages, api_key=api_key)
+            provider = self.get_provider_for_model(model, state)
+            api_key = state["api_keys"].get(provider)
+            api_base = state.get("custom_api_bases", {}).get(model)
+            
+            kwargs = {}
+            if api_base:
+                kwargs["api_base"] = api_base
+                
+            response = generate_response(model, messages, api_key=api_key, **kwargs)
             cycle_responses[model] = response
             
         state["cycles"].append(cycle_responses)
@@ -49,10 +84,8 @@ class DebateEngine:
     def generate_consensus(self, state: DiscussionState):
         broadcast_ws(state["discussion_id"], "Building Consensus...")
         latest_responses = state["cycles"][-1]
-        
-        gemini_key = state["api_keys"].get("gemini-2.5-flash")
-        
-        consensus_data = self.consensus_engine.extract_consensus(latest_responses, api_key=gemini_key)
+        int_model, int_key = self.get_internal_engine_and_key(state)
+        consensus_data = self.consensus_engine.extract_consensus(latest_responses, model=int_model, api_key=int_key)
         
         state["consensus_score"] = consensus_data.get("confidence", 0)
         state["reasoning_score"] = consensus_data.get("reasoning_score", 0)
@@ -67,9 +100,8 @@ class DebateEngine:
         consensus_data = {
             "confidence": state.get("consensus_score", 0)
         }
-        
-        gemini_key = state["api_keys"].get("gemini-2.5-flash")
-        res = self.verification_engine.verify_claims(consensus_data, api_key=gemini_key)
+        int_model, int_key = self.get_internal_engine_and_key(state)
+        res = self.verification_engine.verify_claims(consensus_data, model=int_model, api_key=int_key)
         
         if not res["passed"]:
             state["hallucination_score"] = max(state.get("hallucination_score", 0), 85)
@@ -83,7 +115,7 @@ class DebateEngine:
             hallucination=state.get("hallucination_score", 0),
             missing_info_count=len(state.get("missing_information", [])),
             current_cycle=len(state["cycles"]),
-            max_cycles=state["max_cycles"]
+            max_cycles=state["max_rounds"]
         )
         
         if decision == "Stop":
@@ -105,8 +137,15 @@ class DebateEngine:
         for model in state["selected_models"]:
             previous = json.dumps(state["cycles"][-1], indent=2)
             messages = [{"role": "system", "content": prompt.replace("{previous_responses}", previous)}]
-            api_key = state["api_keys"].get(model)
-            response = generate_response(model, messages, api_key=api_key)
+            provider = self.get_provider_for_model(model, state)
+            api_key = state["api_keys"].get(provider)
+            api_base = state.get("custom_api_bases", {}).get(model)
+            
+            kwargs = {}
+            if api_base:
+                kwargs["api_base"] = api_base
+                
+            response = generate_response(model, messages, api_key=api_key, **kwargs)
             cycle_responses[model] = response
             
         state["cycles"].append(cycle_responses)
@@ -123,8 +162,15 @@ class DebateEngine:
         cycle_responses = {}
         for model in state["selected_models"]:
             messages = [{"role": "system", "content": prompt}]
-            api_key = state["api_keys"].get(model)
-            response = generate_response(model, messages, api_key=api_key)
+            provider = self.get_provider_for_model(model, state)
+            api_key = state["api_keys"].get(provider)
+            api_base = state.get("custom_api_bases", {}).get(model)
+            
+            kwargs = {}
+            if api_base:
+                kwargs["api_base"] = api_base
+                
+            response = generate_response(model, messages, api_key=api_key, **kwargs)
             cycle_responses[model] = response
             
         state["cycles"].append(cycle_responses)
@@ -140,8 +186,15 @@ class DebateEngine:
         cycle_responses = {}
         for model in state["selected_models"]:
             messages = [{"role": "system", "content": prompt}]
-            api_key = state["api_keys"].get(model)
-            response = generate_response(model, messages, api_key=api_key)
+            provider = self.get_provider_for_model(model, state)
+            api_key = state["api_keys"].get(provider)
+            api_base = state.get("custom_api_bases", {}).get(model)
+            
+            kwargs = {}
+            if api_base:
+                kwargs["api_base"] = api_base
+                
+            response = generate_response(model, messages, api_key=api_key, **kwargs)
             cycle_responses[model] = response
             
         state["cycles"].append(cycle_responses)
@@ -154,9 +207,8 @@ class DebateEngine:
             "question": state["question"],
             "cycles": state["cycles"]
         }
-        
-        gemini_key = state["api_keys"].get("gemini-2.5-flash")
-        report_json = self.report_engine.generate_final_report(discussion_data, api_key=gemini_key)
+        int_model, int_key = self.get_internal_engine_and_key(state)
+        report_json = self.report_engine.generate_final_report(discussion_data, model=int_model, api_key=int_key)
         
         state["status"] = "Completed"
         return state
