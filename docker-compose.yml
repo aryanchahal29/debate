@@ -1,10 +1,5 @@
 version: '3.8'
 
-x-health-postgres: &health-postgres
-  test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-user} -d ${POSTGRES_DB:-debate}"]
-  interval: 5s
-  timeout: 5s
-  retries: 5
 
 x-health-redis: &health-redis
   test: ["CMD", "redis-cli", "ping"]
@@ -13,19 +8,6 @@ x-health-redis: &health-redis
   retries: 5
 
 services:
-  postgres:
-    image: postgres:15-alpine
-    profiles: ["development"]
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
-      POSTGRES_DB: ${POSTGRES_DB:-debate}
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck: *health-postgres
-
   redis:
     image: redis:7-alpine
     profiles: ["development"]
@@ -42,11 +24,9 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - SUPABASE_DB_URL=postgresql://${POSTGRES_USER:-user}:${POSTGRES_PASSWORD:-password}@postgres:5432/${POSTGRES_DB:-debate}
+      - SUPABASE_DB_URL=${SUPABASE_DB_URL}
       - REDIS_URL=redis://redis:6379/0
     depends_on:
-      postgres:
-        condition: service_healthy
       redis:
         condition: service_healthy
     healthcheck:
@@ -61,7 +41,7 @@ services:
       context: ./backend
     profiles: ["development", "production"]
     environment:
-      - SUPABASE_DB_URL=postgresql://${POSTGRES_USER:-user}:${POSTGRES_PASSWORD:-password}@postgres:5432/${POSTGRES_DB:-debate}
+      - SUPABASE_DB_URL=${SUPABASE_DB_URL}
       - REDIS_URL=redis://redis:6379/0
     depends_on:
       api:
@@ -96,5 +76,4 @@ services:
         condition: service_healthy
 
 volumes:
-  postgres_data:
   redis_data:
